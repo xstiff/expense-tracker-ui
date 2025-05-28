@@ -18,6 +18,14 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // Dodane nowe mapowania ikon
+  'globe': 'public',
+  'creditcard.fill': 'credit-card',
+  'chart.pie.fill': 'pie-chart',
+  'tag.fill': 'local-offer',
+  'person.fill': 'person',
+  'plus': 'add',
+  'square.and.arrow.up': 'share'
 } as IconMapping;
 
 /**
