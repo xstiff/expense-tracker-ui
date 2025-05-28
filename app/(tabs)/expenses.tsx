@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { API } from '@/api/api';
@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Expense } from '@/types/types';
+import AddExpenseForm from '@/components/AddExpenseForm';
 
 export default function ExpensesScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -17,6 +18,7 @@ export default function ExpensesScreen() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAddExpenseVisible, setIsAddExpenseVisible] = useState(false);
 
   const checkAuth = async () => {
     try {
@@ -69,6 +71,18 @@ export default function ExpensesScreen() {
     checkAuth();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      checkAuth();
+      return () => {
+        // Reset state when screen loses focus
+        setExpenses([]);
+        setPage(0);
+        setHasMore(true);
+      };
+    }, [])
+  );
+
   const handleRefresh = () => {
     setPage(0);
     fetchExpenses(0, true);
@@ -93,24 +107,32 @@ export default function ExpensesScreen() {
     }
   };
 
+
   const renderExpenseItem = ({ item }: { item: Expense }) => {
     return (
       <ThemedView style={styles.expenseCard}>
         <ThemedView style={styles.expenseHeader}>
-          <ThemedText type="subtitle">{item.name}</ThemedText>
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={() => handleShareExpense(item.id)}
-          >
-            <IconSymbol size={20} name="square.and.arrow.up" color="#007AFF" />
-          </TouchableOpacity>
+          <ThemedText type="subtitle">Nazwa</ThemedText>
+          <ThemedView style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleShareExpense(item.id)}
+            >
+              <IconSymbol size={20} name="square.and.arrow.up" color="#007AFF" />
+            </TouchableOpacity>
+          </ThemedView>
         </ThemedView>
+        <ThemedText>{item.name}</ThemedText>
+        <ThemedText type="subtitle">Kwota</ThemedText>
         <ThemedText>{item.amount} PLN</ThemedText>
-        <ThemedText type="defaultSemiBold">Kategoria</ThemedText>
+        <ThemedText type="defaultSemiBold">Data dodania</ThemedText>
         <ThemedText>{new Date(item.timestamp).toLocaleDateString()}</ThemedText>
       </ThemedView>
     );
   };
+
+
+
 
   if (!isAuthenticated && !loading) {
     return (
@@ -137,21 +159,45 @@ export default function ExpensesScreen() {
         </ThemedView>
       ) : !expenses.length ? (
         <ThemedView style={[styles.emptyContainer, styles.topMargin]}>
+          <ThemedView style={styles.header}>
+            <ThemedText type="title">Moje wydatki</ThemedText>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={handleRefresh}
+            >
+              <IconSymbol name="arrow.clockwise" size={22} color="#007AFF" />
+            </TouchableOpacity>
+          </ThemedView>
           <ThemedText>Nie masz jeszcze żadnych wydatków</ThemedText>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setIsAddExpenseVisible(true)}
+          >
+            <IconSymbol size={20} name="plus" color="white" />
+            <ThemedText style={styles.addButtonText}>Dodaj wydatek</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       ) : (
         <>
-          <ThemedView style={[styles.headerContent, styles.topMargin]}>
-            <ThemedText type="title">Moje wydatki</ThemedText>
-            <ThemedText>Zarządzaj swoimi wydatkami</ThemedText>
+          <ThemedView style={[styles.headerWithAction, styles.topMargin]}>
+            <ThemedView>
+              <ThemedText type="title">Moje wydatki</ThemedText>
+              <ThemedText>Zarządzaj swoimi wydatkami</ThemedText>
+            </ThemedView>
             <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => Alert.alert('Dodaj wydatek', 'Tu będzie formularz dodawania wydatku')}
+              style={styles.refreshButton}
+              onPress={handleRefresh}
             >
-              <IconSymbol size={20} name="plus" color="white" />
-              <ThemedText style={styles.addButtonText}>Dodaj wydatek</ThemedText>
+              <IconSymbol name="arrow.clockwise" size={22} color="#007AFF" />
             </TouchableOpacity>
           </ThemedView>
+          <TouchableOpacity
+            style={[styles.addButton, styles.centerButton]}
+            onPress={() => setIsAddExpenseVisible(true)}
+          >
+            <IconSymbol size={20} name="plus" color="white" />
+            <ThemedText style={styles.addButtonText}>Dodaj wydatek</ThemedText>
+          </TouchableOpacity>
           <FlatList
             data={expenses}
             keyExtractor={(item) => item.id}
@@ -171,6 +217,11 @@ export default function ExpensesScreen() {
           />
         </>
       )}
+      <AddExpenseForm
+        visible={isAddExpenseVisible}
+        onClose={() => setIsAddExpenseVisible(false)}
+        onExpenseAdded={handleRefresh}
+      />
     </ThemedView>
   );
 }
@@ -178,6 +229,7 @@ export default function ExpensesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 36
   },
   authContainer: {
     justifyContent: 'center',
@@ -189,6 +241,20 @@ const styles = StyleSheet.create({
   headerContent: {
     padding: 16,
     alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  headerWithAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
   },
   expenseCard: {
     padding: 16,
@@ -205,7 +271,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  actionsContainer: {
+    flexDirection: 'row',
+  },
+  actionButton: {
+    padding: 8,
+  },
   shareButton: {
+    padding: 8,
+  },
+  refreshButton: {
     padding: 8,
   },
   list: {
@@ -252,6 +327,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  centerButton: {
+    alignSelf: 'center',
   },
   topMargin: {
     marginTop: 16,

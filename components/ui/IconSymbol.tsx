@@ -25,7 +25,9 @@ const MAPPING = {
   'tag.fill': 'local-offer',
   'person.fill': 'person',
   'plus': 'add',
-  'square.and.arrow.up': 'share'
+  'square.and.arrow.up': 'share',
+  'arrow.clockwise': 'refresh',
+  'lock': 'lock'
 } as IconMapping;
 
 /**

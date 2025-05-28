@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import { API } from '@/api/api';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Expense } from '@/types/types';
 
 export default function PublicExpensesScreen() {
@@ -39,6 +40,12 @@ export default function PublicExpensesScreen() {
     fetchPublicExpenses();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPublicExpenses(0, true);
+    }, [])
+  );
+
   const handleRefresh = () => {
     setPage(0);
     fetchPublicExpenses(0, true);
@@ -55,23 +62,31 @@ export default function PublicExpensesScreen() {
   const renderExpenseItem = ({ item }: { item: Expense }) => {
     return (
       <ThemedView style={styles.expenseCard}>
-        <ThemedText type="subtitle">{item.name}</ThemedText>
+        <ThemedText type="subtitle">Nazwa</ThemedText>
+        <ThemedText>{item.name}</ThemedText>
+        <ThemedText type="subtitle">Kwota</ThemedText>
         <ThemedText>{item.amount} PLN</ThemedText>
-        <ThemedText type="defaultSemiBold">Kategoria</ThemedText>
+        <ThemedText type="defaultSemiBold">Data dodania</ThemedText>
         <ThemedText>{new Date(item.timestamp).toLocaleDateString()}</ThemedText>
       </ThemedView>
     );
   };
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <ThemedView style={styles.headerContent}>
-          <ThemedText type="title">Publiczne Wydatki</ThemedText>
-          <ThemedText>Ostatnie udostępnione wydatki użytkowników</ThemedText>
-        </ThemedView>
-      }>
+    <ThemedView style={styles.container}>
+      {/* Nagłówek z przyciskiem odświeżania */}
+      <ThemedView style={styles.header}>
+        <ThemedText type="title">Publiczne Wydatki</ThemedText>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+        >
+          <IconSymbol name="arrow.clockwise" size={22} color="#007AFF" />
+        </TouchableOpacity>
+      </ThemedView>
+
+      <ThemedText style={styles.subtitle}>Ostatnie udostępnione wydatki użytkowników</ThemedText>
+
       {loading && page === 0 ? (
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
@@ -86,6 +101,7 @@ export default function PublicExpensesScreen() {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           style={styles.list}
+          contentContainerStyle={styles.listContent}
           ListFooterComponent={
             loading && page > 0 ? (
               <ThemedView style={styles.footerLoader}>
@@ -99,11 +115,30 @@ export default function PublicExpensesScreen() {
           <ThemedText>Brak publicznych wydatków do wyświetlenia</ThemedText>
         </ThemedView>
       )}
-    </ParallaxScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    marginTop: 36
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  subtitle: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  refreshButton: {
+    padding: 8,
+  },
   headerContent: {
     padding: 16,
     alignItems: 'center',
@@ -120,7 +155,10 @@ const styles = StyleSheet.create({
   },
   list: {
     width: '100%',
-    paddingHorizontal: 16,
+    flex: 1,
+  },
+  listContent: {
+    padding: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -129,8 +167,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyContainer: {
-    padding: 20,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   footerLoader: {
     paddingVertical: 20,

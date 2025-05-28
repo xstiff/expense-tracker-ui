@@ -71,7 +71,7 @@ export class API {
     /**
      * Rejestracja użytkownika
      */
-    static async signup(data: SignupRequest): Promise<User> {
+    static async signup(data: SignupRequest): Promise<User | null> {
         try {
             const response = await axiosInstance.post('/auth/signup', data);
             return response.data;
@@ -83,7 +83,7 @@ export class API {
     /**
      * Logowanie użytkownika
      */
-    static async login(data: LoginRequest): Promise<TokenResponse> {
+    static async login(data: LoginRequest): Promise<TokenResponse | null> {
         try {
             // Dla formatu OAuth2PasswordRequestForm wymagany jest Content-Type: application/x-www-form-urlencoded
             const formData = new URLSearchParams();
@@ -119,7 +119,7 @@ export class API {
     /**
      * Pobranie aktualnie zalogowanego użytkownika
      */
-    static async getCurrentUser(): Promise<User> {
+    static async getCurrentUser(): Promise<User | null> {
         try {
             const response = await axiosInstance.get('/users/me');
             return response.data;
@@ -133,7 +133,7 @@ export class API {
     /**
      * Tworzenie nowej kategorii
      */
-    static async createCategory(category: CategoryBase): Promise<Category> {
+    static async createCategory(category: CategoryBase): Promise<Category | null> {
         try {
             const response = await axiosInstance.post('/users/me/categories', category);
             return response.data;
@@ -145,7 +145,7 @@ export class API {
     /**
      * Pobieranie wszystkich kategorii użytkownika
      */
-    static async getCategories(offset = 0, limit = 100): Promise<PagedResponse<Category>> {
+    static async getCategories(offset = 0, limit = 100): Promise<PagedResponse<Category> | null> {
         try {
             const response = await axiosInstance.get('/users/me/categories', {
                 params: { offset, limit }
@@ -159,7 +159,7 @@ export class API {
     /**
      * Tworzenie wielu kategorii offline jednocześnie
      */
-    static async createOfflineCategories(categories: CategoryBase[]): Promise<Category[]> {
+    static async createOfflineCategories(categories: CategoryBase[]): Promise<Category[] | null> {
         try {
             const response = await axiosInstance.post('/users/me/categories/offline', categories);
             return response.data;
@@ -199,9 +199,33 @@ export class API {
     /**
      * Tworzenie wielu budżetów offline jednocześnie
      */
-    static async createOfflineBudgets(budgets: BudgetBase[]): Promise<Budget[]> {
+    static async createOfflineBudgets(budgets: BudgetBase[]): Promise<Budget[] | null> {
         try {
             const response = await axiosInstance.post('/users/me/budgets/offline', budgets);
+            return response.data;
+        } catch (error) {
+            return handleError(error);
+        }
+    }
+
+    /**
+     * Prywatyzowanie budżetu (zmiana na prywatny)
+     */
+    static async privatizeBudget(budgetId: string): Promise<Budget | null> {
+        try {
+            const response = await axiosInstance.patch(`/users/me/budgets/${budgetId}/private`);
+            return response.data;
+        } catch (error) {
+            return handleError(error);
+        }
+    }
+
+    /**
+     * Udostępnianie budżetu (zmiana na publiczny)
+     */
+    static async shareBudget(budgetId: string): Promise<Budget | null> {
+        try {
+            const response = await axiosInstance.patch(`/users/me/budgets/${budgetId}/share`);
             return response.data;
         } catch (error) {
             return handleError(error);
@@ -213,7 +237,7 @@ export class API {
     /**
      * Tworzenie nowego wydatku z opcjonalnym załącznikiem
      */
-    static async createExpense(data: ExpenseCreateRequest): Promise<Expense> {
+    static async createExpense(data: ExpenseCreateRequest): Promise<Expense | null> {
         try {
             const formData = new FormData();
 
@@ -242,7 +266,7 @@ export class API {
     /**
      * Pobieranie wszystkich wydatków użytkownika z opcjonalną filtracją
      */
-    static async getExpenses(params?: ExpenseQueryParams): Promise<PagedResponse<Expense>> {
+    static async getExpenses(params?: ExpenseQueryParams): Promise<PagedResponse<Expense> | null> {
         try {
             const response = await axiosInstance.get('/users/me/expenses', {
                 params
@@ -256,7 +280,7 @@ export class API {
     /**
      * Pobieranie pojedynczego wydatku po ID
      */
-    static async getExpenseById(expenseId: string): Promise<Expense> {
+    static async getExpenseById(expenseId: string): Promise<Expense | null> {
         try {
             const response = await axiosInstance.get(`/users/me/expenses/${expenseId}`);
             return response.data;
@@ -268,7 +292,7 @@ export class API {
     /**
      * Udostępnianie wydatku (zmiana na publiczny)
      */
-    static async shareExpense(expenseId: string): Promise<Expense> {
+    static async shareExpense(expenseId: string): Promise<Expense | null> {
         try {
             const response = await axiosInstance.patch(`/users/me/expenses/${expenseId}/share`);
             return response.data;
@@ -278,9 +302,21 @@ export class API {
     }
 
     /**
+     * Prywatyzowanie wydatku (zmiana na prywatny)
+     */
+    static async privatizeExpense(expenseId: string): Promise<Expense | null> {
+        try {
+            const response = await axiosInstance.patch(`/users/me/expenses/${expenseId}/private`);
+            return response.data;
+        } catch (error) {
+            return handleError(error);
+        }
+    }
+
+    /**
      * Tworzenie wielu wydatków offline jednocześnie
      */
-    static async createOfflineExpenses(expenses: ExpenseBase[]): Promise<Expense[]> {
+    static async createOfflineExpenses(expenses: ExpenseBase[]): Promise<Expense[] | null> {
         try {
             const response = await axiosInstance.post('/users/me/expenses/offline', expenses);
             return response.data;
@@ -292,7 +328,7 @@ export class API {
     /**
      * Pobieranie publicznych wydatków
      */
-    static async getPublicExpenses(params?: PublicExpenseQueryParams): Promise<PagedResponse<Expense>> {
+    static async getPublicExpenses(params?: PublicExpenseQueryParams): Promise<PagedResponse<Expense> | null> {
         try {
             const response = await axiosInstance.get('/expenses', {
                 params

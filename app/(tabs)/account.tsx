@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import { API } from '@/api/api';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
 enum AuthMode {
   LOGIN = 'login',
@@ -24,6 +26,12 @@ export default function AccountScreen() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkAuth();
+    }, [])
+  );
 
   const checkAuth = async () => {
     try {
@@ -137,7 +145,12 @@ export default function AccountScreen() {
 
         {authMode === AuthMode.PROFILE ? (
           <ThemedView style={styles.profileContainer}>
-            <ThemedText type="subtitle">Witaj, {user?.username || 'Użytkowniku'}!</ThemedText>
+            <ThemedView style={styles.profileHeader}>
+              <ThemedText type="subtitle">Witaj, {user?.username || 'Użytkowniku'}!</ThemedText>
+              <TouchableOpacity style={styles.refreshButton} onPress={checkAuth}>
+                <IconSymbol name="arrow.clockwise" size={22} color="#007AFF" />
+              </TouchableOpacity>
+            </ThemedView>
             <ThemedText style={styles.emailText}>{user?.email}</ThemedText>
 
             <TouchableOpacity
@@ -292,6 +305,16 @@ const styles = StyleSheet.create({
   profileContainer: {
     width: '100%',
     alignItems: 'center',
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  refreshButton: {
+    padding: 10,
   },
   emailText: {
     marginVertical: 8,

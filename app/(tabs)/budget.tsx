@@ -7,6 +7,7 @@ import { API } from '@/api/api';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Budget } from '@/types/types';
 
 export default function BudgetScreen() {
@@ -150,14 +151,10 @@ export default function BudgetScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ParallaxScrollView
-        headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-        headerImage={
-          <ThemedView style={[styles.headerContent, styles.topMargin]}>
-            <ThemedText type="title">Budżet miesięczny</ThemedText>
-            <ThemedText>Ustaw i śledź swój budżet</ThemedText>
-          </ThemedView>
-        }>
+        <ThemedView style={[styles.headerContent, styles.topMargin]}>
+          <ThemedText type="title">Budżet miesięczny</ThemedText>
+          <ThemedText>Ustaw i śledź swój budżet</ThemedText>
+        </ThemedView>
         <ThemedView style={styles.content}>
           <ThemedView style={styles.monthSelector}>
             <TouchableOpacity onPress={handlePreviousMonth}>
@@ -169,6 +166,10 @@ export default function BudgetScreen() {
             </TouchableOpacity>
           </ThemedView>
 
+          <TouchableOpacity style={styles.refreshButton} onPress={fetchBudget}>
+            <IconSymbol name="arrow.clockwise" size={24} color="#007AFF" />
+          </TouchableOpacity>
+
           {loading ? (
             <ThemedView style={styles.loadingContainer}>
               <ActivityIndicator size="large" />
@@ -179,11 +180,10 @@ export default function BudgetScreen() {
                 <>
                   <ThemedView style={styles.budgetInfo}>
                     <ThemedText type="subtitle">Obecny budżet</ThemedText>
-                    <ThemedText type="title">{budget.max_budget} PLN</ThemedText>
+                    <ThemedText type="title">{budget.remaining_budget} / {budget.max_budget} PLN</ThemedText>
                   </ThemedView>
                   <ThemedView style={styles.spentInfo}>
                     <ThemedText>Wydano: {budget.max_budget - (budget.remaining_budget || 0)} PLN</ThemedText>
-                    <ThemedText>Pozostało: {budget.remaining_budget || 0} PLN</ThemedText>
                   </ThemedView>
                 </>
               ) : (
@@ -192,28 +192,32 @@ export default function BudgetScreen() {
                 </ThemedView>
               )}
 
-              <ThemedView style={styles.setBudgetContainer}>
-                <ThemedText type="subtitle">Ustaw budżet</ThemedText>
-                <ThemedView style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={newBudgetAmount}
-                    onChangeText={setNewBudgetAmount}
-                    placeholder="Wpisz kwotę budżetu"
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={handleSaveBudget}
-                  >
-                    <ThemedText style={styles.buttonText}>Zapisz</ThemedText>
-                  </TouchableOpacity>
-                </ThemedView>
-              </ThemedView>
+              {
+                  !budget && (
+                      <ThemedView style={styles.setBudgetContainer}>
+                        <ThemedText type="subtitle">Ustaw budżet</ThemedText>
+                        <ThemedView style={styles.inputContainer}>
+                          <TextInput
+                              style={styles.input}
+                              value={newBudgetAmount}
+                              onChangeText={setNewBudgetAmount}
+                              placeholder="Wpisz kwotę budżetu"
+                              keyboardType="numeric"
+                          />
+                          <TouchableOpacity
+                              style={styles.saveButton}
+                              onPress={handleSaveBudget}
+                          >
+                            <ThemedText style={styles.buttonText}>Zapisz</ThemedText>
+                          </TouchableOpacity>
+                        </ThemedView>
+                      </ThemedView>
+                  )
+              }
+
             </ThemedView>
           )}
         </ThemedView>
-      </ParallaxScrollView>
     </ThemedView>
   );
 }
@@ -221,6 +225,7 @@ export default function BudgetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 36
   },
   authContainer: {
     justifyContent: 'center',
@@ -248,6 +253,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     paddingHorizontal: 16,
   },
+  refreshButton: {
+    alignSelf: 'center',
+    marginVertical: 16,
+  },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -262,7 +271,7 @@ const styles = StyleSheet.create({
   },
   spentInfo: {
     padding: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#6a0c0c',
     borderRadius: 8,
     marginBottom: 16,
   },

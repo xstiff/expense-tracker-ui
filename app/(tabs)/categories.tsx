@@ -118,10 +118,17 @@ export default function CategoriesScreen() {
         </ThemedView>
       ) : (
         <>
-          <ThemedView style={[styles.headerContent, styles.topMargin]}>
+          <ThemedView style={[styles.header, styles.topMargin]}>
             <ThemedText type="title">Kategorie</ThemedText>
-            <ThemedText>Zarządzaj kategoriami wydatków</ThemedText>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={handleRefresh}
+            >
+              <IconSymbol name="arrow.clockwise" size={22} color="#007AFF" />
+            </TouchableOpacity>
           </ThemedView>
+
+          <ThemedText style={styles.subtitle}>Zarządzaj kategoriami wydatków</ThemedText>
 
           <ThemedView style={styles.content}>
             <ThemedView style={styles.addCategoryContainer}>
@@ -169,14 +176,21 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 36
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerContent: {
+  header: {
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 16,
   },
   content: {
     padding: 16,
@@ -252,5 +266,8 @@ const styles = StyleSheet.create({
   },
   topMargin: {
     marginTop: 20,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });
