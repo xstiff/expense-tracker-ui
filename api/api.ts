@@ -16,6 +16,7 @@ import {
     PublicExpenseQueryParams,
     BudgetQueryParams,
     ExpenseCreateRequest} from '@/types/types';
+import OfflineManager from "@/services/OfflineManager";
 
 const API_URL = 'https://mkrolik-expense-tracker-897427721016.europe-west1.run.app';
 
@@ -81,6 +82,8 @@ export class API {
             });
 
             await AsyncStorage.setItem('auth_token', response.data.access_token);
+
+            await OfflineManager.saveAuthToken(response.data.access_token);
 
             return response.data;
         } catch (error) {

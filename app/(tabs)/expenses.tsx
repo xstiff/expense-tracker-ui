@@ -8,7 +8,8 @@ import {
   Modal,
   Image,
   Dimensions,
-  View
+  View,
+  TextInput
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,9 +22,12 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Expense } from '@/types/types';
 import AddExpenseForm from '@/components/AddExpenseForm';
 import { OfflineManager, OfflineExpense } from '@/services/OfflineManager';
+import SearchBar from '@/components/SearchBar';
 
 export default function ExpensesScreen() {
   const [expenses, setExpenses] = useState<(Expense | OfflineExpense)[]>([]);
+  const [filteredExpenses, setFilteredExpenses] = useState<(Expense | OfflineExpense)[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
@@ -68,31 +72,29 @@ export default function ExpensesScreen() {
       if (offlineItems.length > 0) {
         setIsAuthenticated(true);
         setExpenses(offlineItems);
+        setFilteredExpenses(offlineItems);
       } else {
-        router.push('/(tabs)/account');
         setIsAuthenticated(false);
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 
-  const fetchOfflineExpensesOnly = async () => {
-    setLoading(true);
-    try {
-      const offlineExpenses = await fetchOfflineExpenses();
-      setExpenses(offlineExpenses);
-    } catch (error) {
-      console.error('Błąd podczas pobierania wydatków offline:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
 
-  const fetchOfflineExpenses = async () => {
-    const offlineExpenses = await OfflineManager.getOfflineExpenses();
-    const notSyncedExpenses = offlineExpenses.filter(expense => !expense.is_synced);
-    setOfflineCount(notSyncedExpenses.length);
-    return notSyncedExpenses;
+    if (text.trim() === '') {
+      setFilteredExpenses(expenses);
+      return;
+    }
+
+    const filtered = expenses.filter(expense =>
+      expense.name.toLowerCase().includes(text.toLowerCase()) ||
+      expense.amount.toString().includes(text) ||
+      new Date(expense.timestamp).toLocaleDateString().includes(text)
+    );
+
+    setFilteredExpenses(filtered);
   };
 
   const fetchExpenses = async (pageNumber = 0, shouldRefresh = false) => {
@@ -117,9 +119,17 @@ export default function ExpensesScreen() {
           if (shouldRefresh || pageNumber === 0) {
             allExpenses = [...offlineExpenses, ...response.items];
             setExpenses(allExpenses);
+            setFilteredExpenses(allExpenses);
           } else {
             allExpenses = [...expenses, ...response.items];
             setExpenses(allExpenses);
+
+            // Aktualizuj przefiltrowane wydatki tylko jeśli nie ma aktywnego wyszukiwania
+            if (searchQuery.trim() === '') {
+              setFilteredExpenses(allExpenses);
+            } else {
+              handleSearch(searchQuery);
+            }
           }
 
           setHasMore(response.items.length === 20);
@@ -128,6 +138,7 @@ export default function ExpensesScreen() {
         console.error('Błąd podczas pobierania wydatków online:', error);
         if (shouldRefresh || pageNumber === 0) {
           setExpenses(offlineExpenses);
+          setFilteredExpenses(offlineExpenses);
         }
       }
     } catch (error) {
@@ -138,75 +149,28 @@ export default function ExpensesScreen() {
     }
   };
 
-  const syncOfflineExpenses = async () => {
+  const fetchOfflineExpensesOnly = async () => {
+    setLoading(true);
     try {
-      setSyncingOffline(true);
-      const syncedExpenses = await OfflineManager.syncOfflineExpenses();
-      if (syncedExpenses.length > 0) {
-        Alert.alert('Synchronizacja', `Zsynchronizowano ${syncedExpenses.length} wydatków`);
-        fetchExpenses(0, true);
-      }
+      const offlineExpenses = await fetchOfflineExpenses();
+      setExpenses(offlineExpenses);
+      setFilteredExpenses(offlineExpenses);
     } catch (error) {
-      console.error('Błąd podczas synchronizacji wydatków offline:', error);
+      console.error('Błąd podczas pobierania wydatków offline:', error);
     } finally {
-      setSyncingOffline(false);
+      setLoading(false);
     }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      checkAuth();
-      return () => {
-        setExpenses([]);
-        setPage(0);
-        setHasMore(true);
-      };
-    }, [])
-  );
-
-  const handleRefresh = () => {
-    setPage(0);
-    fetchExpenses(0, true);
-  };
-
-  const handleLoadMore = () => {
-    if (hasMore && !loading && !refreshing) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchExpenses(nextPage);
-    }
-  };
-
-  const handleShareExpense = async (expenseId: string) => {
-    try {
-      await API.shareExpense(expenseId);
-      Alert.alert('Sukces', 'Wydatek został udostępniony publicznie');
-      handleRefresh();
-    } catch (error) {
-      console.error('Błąd podczas udostępniania wydatku:', error);
-      Alert.alert('Błąd', 'Nie udało się udostępnić wydatku');
-    }
-  };
-
-  const handleViewReceipt = (expense: Expense) => {
-    if ('image_url' in expense && expense.image_url) {
-      setSelectedExpense(expense as Expense);
-      setReceiptModalVisible(true);
-    }
-  };
-
-  const isOfflineExpense = (expense: Expense | OfflineExpense): expense is OfflineExpense => {
-    return 'local_id' in expense;
   };
 
   const renderExpenseItem = ({ item }: { item: Expense | OfflineExpense }) => {
     const isOffline = isOfflineExpense(item);
+    const hasImage = !isOffline && 'image_url' in item && item.image_url;
 
     return (
       <TouchableOpacity
         style={styles.expenseCard}
         onPress={() => !isOffline && handleViewReceipt(item as Expense)}
-        disabled={isOffline || !('image_url' in item && item.image_url)}
+        disabled={isOffline || !hasImage}
       >
         <ThemedView style={styles.expenseHeader}>
           <ThemedText type="subtitle">Nazwa</ThemedText>
@@ -216,9 +180,9 @@ export default function ExpensesScreen() {
                 <IconSymbol size={18} name="wifi.slash" color="#FF9500" />
               </ThemedView>
             )}
-            {!isOffline && 'image_url' in item && item.image_url && (
-              <ThemedView style={styles.receiptIconContainer}>
-                <IconSymbol size={18} name="doc.text.image" color="#007AFF" />
+            {hasImage && (
+              <ThemedView style={styles.cameraIconContainer}>
+                <IconSymbol size={18} name="camera" color="#FFFFFF" />
               </ThemedView>
             )}
             {!isOffline && (
@@ -243,6 +207,75 @@ export default function ExpensesScreen() {
         <ThemedText>{new Date(item.timestamp).toLocaleDateString()}</ThemedText>
       </TouchableOpacity>
     );
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkAuth();
+      return () => {
+        setExpenses([]);
+        setFilteredExpenses([]);
+        setPage(0);
+        setHasMore(true);
+      };
+    }, [])
+  );
+
+  const handleRefresh = () => {
+    setPage(0);
+    fetchExpenses(0, true);
+  };
+
+  const handleLoadMore = () => {
+    if (hasMore && !loading && !refreshing) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchExpenses(nextPage);
+    }
+  };
+
+  const fetchOfflineExpenses = async () => {
+    const offlineExpenses = await OfflineManager.getOfflineExpenses();
+    const notSyncedExpenses = offlineExpenses.filter(expense => !expense.is_synced);
+    setOfflineCount(notSyncedExpenses.length);
+    return notSyncedExpenses;
+  };
+
+  const syncOfflineExpenses = async () => {
+    try {
+      setSyncingOffline(true);
+      const syncedExpenses = await OfflineManager.syncOfflineExpenses();
+      if (syncedExpenses.length > 0) {
+        Alert.alert('Synchronizacja', `Zsynchronizowano ${syncedExpenses.length} wydatków`);
+        fetchExpenses(0, true);
+      }
+    } catch (error) {
+      console.error('Błąd podczas synchronizacji wydatków offline:', error);
+    } finally {
+      setSyncingOffline(false);
+    }
+  };
+
+  const handleShareExpense = async (expenseId: string) => {
+    try {
+      await API.shareExpense(expenseId);
+      Alert.alert('Sukces', 'Wydatek został udostępniony publicznie');
+      handleRefresh();
+    } catch (error) {
+      console.error('Błąd podczas udostępniania wydatku:', error);
+      Alert.alert('Błąd', 'Nie udało się udostępnić wydatku');
+    }
+  };
+
+  const handleViewReceipt = (expense: Expense) => {
+    if ('image_url' in expense && expense.image_url) {
+      setSelectedExpense(expense as Expense);
+      setReceiptModalVisible(true);
+    }
+  };
+
+  const isOfflineExpense = (expense: Expense | OfflineExpense): expense is OfflineExpense => {
+    return 'local_id' in expense;
   };
 
   if (!isAuthenticated && !loading) {
@@ -303,6 +336,12 @@ export default function ExpensesScreen() {
             </TouchableOpacity>
           </ThemedView>
 
+          <SearchBar
+            value={searchQuery}
+            onChangeText={handleSearch}
+            placeholder="Szukaj wydatków..."
+          />
+
           <View style={styles.buttonsContainer}>
             <TouchableOpacity
               style={[styles.addButton, styles.actionButton]}
@@ -333,7 +372,7 @@ export default function ExpensesScreen() {
           </View>
 
           <FlatList
-            data={expenses}
+            data={filteredExpenses}
             keyExtractor={(item) => isOfflineExpense(item) ? item.local_id : item.id}
             renderItem={renderExpenseItem}
             onRefresh={handleRefresh}
@@ -341,6 +380,11 @@ export default function ExpensesScreen() {
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             style={styles.list}
+            ListEmptyComponent={
+              <ThemedView style={styles.emptySearchContainer}>
+                <ThemedText>Nie znaleziono żadnych wydatków</ThemedText>
+              </ThemedView>
+            }
             ListFooterComponent={
               loading && page > 0 ? (
                 <ThemedView style={styles.footerLoader}>
@@ -351,6 +395,7 @@ export default function ExpensesScreen() {
           />
         </>
       )}
+
       <AddExpenseForm
         visible={isAddExpenseVisible}
         onClose={() => setIsAddExpenseVisible(false)}
@@ -524,7 +569,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   receiptModalContent: {
-    backgroundColor: 'rgb(37,36,36)',
     padding: 20,
     borderRadius: 8,
     width: '90%',
@@ -558,7 +602,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 8,
   },
   syncButton: {
     flexDirection: 'row',
@@ -575,5 +619,32 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#A9A9A9',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(142, 142, 147, 0.12)',
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 36,
+    marginLeft: 10,
+    color: '#000',
+    fontSize: 16,
+  },
+  emptySearchContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  cameraIconContainer: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: 4,
+    marginRight: 8,
   },
 });

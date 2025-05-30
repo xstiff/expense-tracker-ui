@@ -4,12 +4,10 @@ import {Stack} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import 'react-native-reanimated';
 import React, {useEffect} from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {useColorScheme} from '@/hooks/useColorScheme';
 import {OfflineManager} from '@/services/OfflineManager';
-
-const OFFLINE_SIMULATOR_KEY = 'offline_simulator_enabled';
+import OfflineBanner from '@/components/OfflineBanner';
 
 export default function RootLayout() {
     const colorScheme = useColorScheme();
@@ -21,11 +19,6 @@ export default function RootLayout() {
         const initializeApp = async () => {
             try {
                 await OfflineManager.initialize();
-
-                const savedState = await AsyncStorage.getItem(OFFLINE_SIMULATOR_KEY);
-                if (savedState !== null) {
-                    const state = JSON.parse(savedState);
-                }
             } catch (error) {
                 console.error('Błąd podczas inicjalizacji:', error);
             }
@@ -34,13 +27,13 @@ export default function RootLayout() {
         initializeApp();
     }, []);
 
-
     if (!loaded) {
         return null;
     }
 
     return (
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <OfflineBanner />
             <Stack>
                 <Stack.Screen name="(tabs)" options={{headerShown: false}}/>
                 <Stack.Screen name="+not-found"/>
@@ -49,5 +42,4 @@ export default function RootLayout() {
         </ThemeProvider>
     );
 }
-
 

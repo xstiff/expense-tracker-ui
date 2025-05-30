@@ -18,16 +18,22 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  // Dodane nowe mapowania ikon
+  'camera': 'camera-alt',
+  'camera.fill': 'camera-alt',
+  'doc.text.image': 'insert-photo',
+  'plus': 'add',
+  'arrow.clockwise': 'refresh',
+  'square.and.arrow.up': 'share',
+  'magnifyingglass': 'search',
+  'xmark.circle.fill': 'cancel',
+  'xmark': 'close',
+  'wifi.slash': 'signal-wifi-off',
   'globe': 'public',
   'creditcard.fill': 'credit-card',
   'chart.pie.fill': 'pie-chart',
+  'folder.fill': 'folder',
   'tag.fill': 'local-offer',
-  'person.fill': 'person',
-  'plus': 'add',
-  'square.and.arrow.up': 'share',
-  'arrow.clockwise': 'refresh',
-  'lock': 'lock'
+  'person.fill': 'person'
 } as IconMapping;
 
 /**

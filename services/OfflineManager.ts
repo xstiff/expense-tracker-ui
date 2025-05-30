@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { ExpenseBase, Expense } from '@/types/types';
+import { ExpenseBase, Expense, Category } from '@/types/types';
 import { API } from '@/api/api';
-import axios from 'axios';
 
 const OFFLINE_EXPENSES_KEY = 'offline_expenses';
-const FORCE_OFFLINE_KEY = 'force_offline_mode';
+const OFFLINE_CATEGORIES_KEY = 'offline_categories';
+const AUTH_TOKEN_KEY = 'auth_token';
 
 export interface OfflineExpense extends ExpenseBase {
   local_id: string;
@@ -13,23 +13,12 @@ export interface OfflineExpense extends ExpenseBase {
 }
 
 export class OfflineManager {
-  private static _forceOfflineMode: boolean = false;
   private static _initialized: boolean = false;
 
   static async initialize(): Promise<void> {
     if (this._initialized) return;
 
     try {
-      const forcedOffline = await AsyncStorage.getItem(FORCE_OFFLINE_KEY);
-      if (forcedOffline !== null) {
-        this._forceOfflineMode = JSON.parse(forcedOffline);
-        console.log(`[OfflineManager] Inicjalizacja: tryb offline = ${this._forceOfflineMode}`);
-
-        if (this._forceOfflineMode) {
-          await this.setupNetworkInterceptors();
-        }
-      }
-
       NetInfo.addEventListener(state => {
         console.log(`[OfflineManager] Zmiana stanu sieci: ${state.isConnected ? 'online' : 'offline'}`);
       });
@@ -40,92 +29,8 @@ export class OfflineManager {
     }
   }
 
-  private static async setupNetworkInterceptors(): Promise<void> {
-    if (!global.originalAxiosAdapter) {
-      global.originalAxiosAdapter = axios.defaults.adapter;
-    }
-
-    axios.defaults.adapter = () => {
-      console.log("[OfflineManager] 🔴 Blokowanie zapytania axios");
-      return Promise.reject({
-        message: 'Network request failed - Offline simulator',
-        isOfflineSimulator: true
-      });
-    };
-
-    if (!global.originalFetch) {
-      global.originalFetch = global.fetch;
-    }
-
-    global.fetch = () => {
-      console.log("[OfflineManager] 🔴 Blokowanie zapytania fetch");
-      return Promise.reject(new Error('Network request failed - Offline simulator'));
-    };
-
-    if (!global.originalXHROpen && global.XMLHttpRequest) {
-      global.originalXHROpen = global.XMLHttpRequest.prototype.open;
-      global.XMLHttpRequest.prototype.open = function() {
-        console.log("[OfflineManager] 🔴 Blokowanie zapytania XMLHttpRequest");
-        throw new Error('Network request failed - Offline simulator');
-      };
-    }
-
-    console.log('[OfflineManager] ✓ Zainstalowano przechwytywacze zapytań sieciowych');
-  }
-
-  private static restoreNetworkInterceptors(): void {
-    if (global.originalAxiosAdapter) {
-      axios.defaults.adapter = global.originalAxiosAdapter;
-      global.originalAxiosAdapter = undefined;
-    }
-
-    if (global.originalFetch) {
-      global.fetch = global.originalFetch;
-      global.originalFetch = undefined;
-    }
-
-    if (global.originalXHROpen && global.XMLHttpRequest) {
-      global.XMLHttpRequest.prototype.open = global.originalXHROpen;
-      global.originalXHROpen = undefined;
-    }
-
-    console.log('[OfflineManager] ✓ Przywrócono normalne działanie sieci');
-  }
-
-  static async setForceOfflineMode(value: boolean): Promise<void> {
-    try {
-      if (!this._initialized) {
-        await this.initialize();
-      }
-
-      this._forceOfflineMode = value;
-      await AsyncStorage.setItem(FORCE_OFFLINE_KEY, JSON.stringify(value));
-      console.log(`[OfflineManager] Ustawiono wymuszony tryb offline: ${value}`);
-
-      if (value) {
-        await this.setupNetworkInterceptors();
-      } else {
-        this.restoreNetworkInterceptors();
-      }
-    } catch (error) {
-      console.error('[OfflineManager] Błąd podczas ustawiania wymuszonego trybu offline:', error);
-    }
-  }
-
   static async isOnline(): Promise<boolean> {
     try {
-      if (this._forceOfflineMode) {
-        console.log("[OfflineManager] isOnline: Zwracam false (wymuszony tryb offline)");
-        return false;
-      }
-
-      const forcedOffline = await AsyncStorage.getItem(FORCE_OFFLINE_KEY);
-      if (forcedOffline !== null && JSON.parse(forcedOffline) === true) {
-        this._forceOfflineMode = true;
-        console.log("[OfflineManager] isOnline: Zwracam false (wczytany wymuszony tryb offline)");
-        return false;
-      }
-
       const netInfo = await NetInfo.fetch();
       const isConnected = netInfo.isConnected ?? false;
       console.log(`[OfflineManager] isOnline: Zwracam ${isConnected} (rzeczywisty stan połączenia)`);
@@ -169,6 +74,48 @@ export class OfflineManager {
     } catch (error) {
       console.error('Błąd podczas pobierania wydatków offline:', error);
       return [];
+    }
+  }
+
+  static async saveCategories(categories: Category[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(OFFLINE_CATEGORIES_KEY, JSON.stringify(categories));
+      console.log(`[OfflineManager] Zapisano ${categories.length} kategorii offline`);
+    } catch (error) {
+      console.error('Błąd podczas zapisywania kategorii offline:', error);
+      throw error;
+    }
+  }
+
+  static async getOfflineCategories(): Promise<Category[]> {
+    try {
+      const categoriesJson = await AsyncStorage.getItem(OFFLINE_CATEGORIES_KEY);
+      if (!categoriesJson) {
+        return [];
+      }
+      return JSON.parse(categoriesJson);
+    } catch (error) {
+      console.error('Błąd podczas pobierania kategorii offline:', error);
+      return [];
+    }
+  }
+
+  static async saveAuthToken(token: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+      console.log('[OfflineManager] Token zapisany pomyślnie');
+    } catch (error) {
+      console.error('Błąd podczas zapisywania tokenu:', error);
+      throw error;
+    }
+  }
+
+  static async getAuthToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Błąd podczas pobierania tokenu:', error);
+      return null;
     }
   }
 

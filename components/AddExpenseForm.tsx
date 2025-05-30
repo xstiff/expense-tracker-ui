@@ -68,16 +68,41 @@ export default function AddExpenseForm({visible, onClose, onExpenseAdded}: AddEx
     const fetchCategories = async () => {
         try {
             setLoadingCategories(true);
-            const response = await API.getCategories();
-            if (response && response.items) {
-                setCategories(response.items);
-                if (response.items.length > 0) {
-                    setCategoryId(response.items[0].id);
+            const isOnline = await OfflineManager.isOnline();
+
+            if (isOnline) {
+                const response = await API.getCategories();
+                if (response && response.items) {
+                    await OfflineManager.saveCategories(response.items);
+                    setCategories(response.items);
+                    if (response.items.length > 0) {
+                        setCategoryId(response.items[0].id);
+                    }
+                }
+            } else {
+                const offlineCategories = await OfflineManager.getOfflineCategories();
+                if (offlineCategories && offlineCategories.length > 0) {
+                    setCategories(offlineCategories);
+                    if (offlineCategories.length > 0) {
+                        setCategoryId(offlineCategories[0].id);
+                    }
+                } else {
+                    Alert.alert('Brak kategorii', 'Nie znaleziono zapisanych kategorii. Połącz się z internetem, aby pobrać kategorie.');
                 }
             }
         } catch (error) {
             console.error('Błąd podczas pobierania kategorii:', error);
-            Alert.alert('Błąd', 'Nie udało się pobrać kategorii');
+            try {
+                const offlineCategories = await OfflineManager.getOfflineCategories();
+                if (offlineCategories && offlineCategories.length > 0) {
+                    setCategories(offlineCategories);
+                    setCategoryId(offlineCategories[0].id);
+                } else {
+                    Alert.alert('Błąd', 'Nie udało się pobrać kategorii. Sprawdź połączenie z internetem.');
+                }
+            } catch (offlineError) {
+                Alert.alert('Błąd', 'Nie udało się pobrać kategorii.');
+            }
         } finally {
             setLoadingCategories(false);
         }
@@ -186,8 +211,10 @@ export default function AddExpenseForm({visible, onClose, onExpenseAdded}: AddEx
                     onExpenseAdded();
                     onClose();
                 } catch (error: any) {
-                    if (error.status === 400) {
+                    console.log('Error details:', error);
+                    if (error.response && error.response.status === 400) {
                         Alert.alert('Błąd', 'Budżet na ten miesiąc jest za mały! Nie dodano wydatku!');
+                        setLoading(false);
                         return;
                     } else {
                         throw error;
