@@ -54,10 +54,21 @@ export interface Expense extends ExpenseBase {
     image_url: string | null;
 }
 
+// Interfejs dla obrazów z expo-image-picker
+export interface ImagePickerAsset {
+    uri: string;
+    width: number;
+    height: number;
+    type?: string;
+    fileName?: string;
+    fileSize?: number;
+    exif?: Record<string, any>;
+}
+
 // Interfejs do tworzenia wydatków z załącznikiem
 export interface ExpenseCreateRequest {
     expense_base: ExpenseBase;
-    image?: File; // Dla React Native będziesz musiał użyć FormData
+    image?: ImagePickerAsset; // Zaktualizowany typ dla obrazów z expo-image-picker
 }
 
 // Interfejs odpowiedzi paginowanej

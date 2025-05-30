@@ -88,7 +88,7 @@ export default function AccountScreen() {
         user_base: {
           username,
           email,
-          full_name: username, // Używamy username jako full_name, jeśli nie mamy osobnego pola
+          full_name: username,
           disabled: false
         },
         password

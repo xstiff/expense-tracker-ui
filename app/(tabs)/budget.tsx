@@ -33,14 +33,19 @@ export default function BudgetScreen() {
         } catch (tokenError) {
           console.log('Token nieprawidłowy lub wygasł:', tokenError);
           await AsyncStorage.removeItem('auth_token');
+          router.push('/(tabs)/account');
+
         }
       }
 
       setIsAuthenticated(false);
       setLoading(false);
     } catch (_error) {
+      router.push('/(tabs)/account');
+
       setIsAuthenticated(false);
       setLoading(false);
+
     }
   };
 
@@ -61,7 +66,6 @@ export default function BudgetScreen() {
     checkAuth();
   }, []);
 
-  // Sprawdzaj autentykację za każdym razem, gdy ekran otrzymuje focus
   useFocusEffect(
     React.useCallback(() => {
       checkAuth();
